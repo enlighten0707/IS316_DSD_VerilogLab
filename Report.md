@@ -6,7 +6,7 @@
 
 ## EXP2-1
 #### 设计/测试模块
-```
+```verilog
 // File: wavegen.v
 
 `timescale 10 ns / 1 ns
@@ -34,7 +34,7 @@ endmodule
 
 ## EXP2-2
 #### 设计模块
-```
+```verilog
 // File: encoder8x3.v 
 module Encoder8x3( output reg[2:0] code, input [7:0] data ); 
  always @(*) 
@@ -54,7 +54,7 @@ module Encoder8x3( output reg[2:0] code, input [7:0] data );
 endmodule 
 ```
 #### 测试模块
-```
+```verilog
 // File: tb_encoder8x3.v
 
 `include "encoder8x3.v"
@@ -89,7 +89,7 @@ endmodule
 ## EXP2-3
 ### a) 2选1多路选择器
 #### 设计模块
-```
+```verilog
 // File: mux2x1.v
 module mux2x1( dout, sel, din );
  output dout;
@@ -101,7 +101,7 @@ endmodule
 ```
 
 #### 仿真模块
-```
+```verilog
 // File: tb_mux2x1.v
 `timescale 10ns / 1ns
 `include "mux2x1.v"
@@ -130,7 +130,7 @@ endmodule
 
 ### b) 4选1多路选择器
 #### 设计模块
-```
+```verilog
 // File: mux4x1.v
 
 `include "mux2x1.v"
@@ -151,7 +151,7 @@ endmodule
 ```
 
 #### 仿真模块
-```
+```verilog
 // File: tb_mux4x1.v
 `timescale 10ns / 1ns
 `include "mux4x1.v"
@@ -182,7 +182,7 @@ endmodule
 
 ## EXP2-4
 #### 设计模块——利用门原语设计
-```
+```verilog
 // File: comb_str.v
 module comb_str(output Y, input A,B,C,D);
  wire M1,M2,M3,M4;
@@ -194,14 +194,14 @@ module comb_str(output Y, input A,B,C,D);
 endmodule
 ```
 #### 设计模块——利用连续赋值语句设计
-```
+```verilog
 //File comb_dataflow.v
 module comb_dataflow(output Y, input A,B,C,D);
  assign Y=(~D&B&C)&~(A|D);
 endmodule
 ```
 #### 设计模块——利用过程语句设计
-```
+```verilog
 //File: comb_behavior.v
 module comb_behavior(output reg Y, input A,B,C,D);
  always@(*) begin
@@ -210,7 +210,7 @@ module comb_behavior(output reg Y, input A,B,C,D);
 endmodule;
 ```
 #### 设计模块——利用UDP设计
-```
+```verilog
 // File: comb_prim.v
 primitive comb_prim(output Y, input A,B,C,D);
  table
@@ -224,7 +224,7 @@ primitive comb_prim(output Y, input A,B,C,D);
 endprimitive
 ```
 #### 测试模块
-```
+```verilog
 // File: testbench_comb.v
 `timescale 10ns / 1ns
 `include "comb_str.v"
@@ -262,7 +262,7 @@ endmodule
 
 ## EXP2-5
 #### 设计模块
-```
+```verilog
 // File: comb_Y1.v
 module comb_Y1(output Y, input A, B, C);
  assign Y = (~A & ~B & C) | (~A & B & ~C) |
@@ -285,7 +285,7 @@ module comb_Y2(Y, A, B, C, D);
 endmodule
 ```
 #### 测试模块
-```
+```verilog
 // File: tb_comb_Y1.v
 `timescale 10ns / 1ns
 `include "comb_Y1.v"
@@ -313,7 +313,7 @@ module tb_comb_Y1;
 
 endmodule
 ```
-```
+```verilog
 // File: tb_comb_Y2.v
 `timescale 10ns / 1ns
 `include "comb_Y2.v"
@@ -349,7 +349,7 @@ endmodule
 
 ## EXP2-6
 #### 设计模块
-```
+```verilog
 //File: ones_count.v
 module ones_count(output reg [3:0] count, input [7:0] dat_in);
  integer k;
@@ -361,7 +361,7 @@ module ones_count(output reg [3:0] count, input [7:0] dat_in);
 endmodule
 ```
 #### 测试模块
-```
+```verilog
 // File: tb_ones_count.v
 `timescale 10ns / 1ns
 `include "ones_count.v"
@@ -402,7 +402,7 @@ endmodule
 
 ## EXP2-7
 #### 设计模块
-```
+```verilog
 //File: dec_counter.v
 module dec_counter(output reg [3:0] count, input clk, reset);
  always@(posedge clk) begin
@@ -428,7 +428,7 @@ module dec_counter(output reg [3:0] count, input clk, reset);
 endmodule
 ```
 #### 测试模块
-```
+```verilog
 // File: tb_dec_counter.v
 `include "dec_counter.v"
 
@@ -461,6 +461,135 @@ endmodule
 ![exp7-2.png](Simulation_results/exp7-2.png)
 
 ## EXP2-8
+#### 设计模块
+```verilog
+// File: comb_str_2.v 
+`include "mux2x1.v" 
+module comb_str( y, sel, a, b, c, d); 
+ output y; 
+ input sel; 
+ input a, b, c, d; 
+ wire s0, s1; 
+ nand #3 u1( s0, a, b); 
+ nand #4 u2( s1, c, d); 
+ 
+ mux2x1 m0( y, sel, {s1,s0}); 
+endmodule 
+
+```
+#### 测试模块
+```verilog
+// File: tb_comb_str_2.v
+
+`include "comb_str_2.v" 
+`define STOP 32 
+
+module tb_comb_str(); 
+ reg [4:0] px; 
+ wire py; 
+ integer i; 
+ 
+ initial begin 
+ px = 5'b0; 
+ for ( i = 1; i < `STOP; i = i + 1 ) begin 
+ #5 px = px + 1'b1; 
+ end 
+ end 
+ comb_str m1(.y(py),.sel(px[4]),.a(px[3]),.b(px[2]),.c(px[1]),.d(px[0])); 
+ 
+ initial 
+ $monitor( "At time %t, y=%1b, sel=%1b, a=%1b, b=%1b, c=%1b, d=%1b",  $time, py, px[4], px[3], px[2], px[1], px[0] ); 
+endmodule 
+```
+#### 仿真结果
+![exp8-1.png](Simulation_results/exp8-1.png)
+![exp8-2.png](Simulation_results/exp8-2.png)
+![exp8-3.png](Simulation_results/exp8-3.png)
+
+## EXP2-9
+#### 设计模块
+```verilog
+//File: LFSR.v
+module LFSR(q, clk, rst_n, load, din);
+
+    output reg [1:26] q;    // 26 bit data output.
+    input clk;              // Clock input.
+    input rst_n;            // Synchronous reset input.
+    input load;             // Synchronous load input.
+    input [1:26] din;       // 26 bit parallel data input.
+
+    always @ ( posedge clk ) begin
+        if (!rst_n) q <= 26'b0;
+        else begin
+            if (load) q <= |din ? din : 26'b1;
+            else begin
+                if (q == 26'b0) q <= 26'b1;
+                else begin
+                    q[10:26] <= q[9:25];
+                    q[9] <= q[8] ^ q[26];
+                    q[8] <= q[7] ^ q[26];
+                    q[3:7] <= q[2:6];
+                    q[2] <= q[1] ^ q[26];
+                    q[1] <= q[26];
+                end
+            end
+        end
+    end
+
+endmodule
+```
+#### 测试模块
+```verilog
+//File: tb_LFSR.v
+
+`include "LFSR.v" 
+
+module tb_LFSR(); 
+ wire [1:26] p_q; 
+ reg [1:26] p_din; 
+ reg p_clk, p_rst_n, p_load; 
+ 
+ LFSR u0(.q(p_q), .clk(p_clk), .rst_n(p_rst_n), .load(p_load), .din(p_din)); 
+ 
+ initial begin 
+  p_clk = 0; 
+  forever #5 p_clk = ~p_clk; 
+ end 
+
+ initial begin 
+  p_rst_n = 0; 
+  #8 p_rst_n = 1; 
+ end 
+ 
+ initial begin 
+  p_load = 0; 
+  p_din = 26'd0; 
+ 
+ #88 p_load = 1'b1; 
+ p_din = 26'd4668_5317; // 26'b10_1100_1000_0101_1100_1000_0101 
+ #10 p_load = 1'b0; 
+ 
+ #80 p_load = 1'b1; 
+ p_din = 26'd0; 
+ #10 p_load = 1'b0; 
+ end 
+ 
+ initial begin 
+ $monitor("At time t=%4t, rst_n=%b, load=%b, din=%d, q=%d", 
+ $time, p_rst_n, p_load, p_din, p_q); 
+ end 
+endmodule 
+```
+#### 仿真结果
+![exp9-1.png](Simulation_results/exp9-1.png)
+![exp9-2.png](Simulation_results/exp9-2.png)
+
+## EXP2-10
+#### 设计模块
+#### 测试模块
+#### 仿真结果
+
+## EXP2-11
 #### 设计模块
 #### 测试模块
 #### 仿真结果
