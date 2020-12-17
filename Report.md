@@ -259,3 +259,208 @@ endmodule
 #### 仿真结果
 ![exp4-1.png](Simulation_results/exp4-1.png)
 ![exp4-2.png](Simulation_results/exp4-2.png)
+
+## EXP2-5
+#### 设计模块
+```
+// File: comb_Y1.v
+module comb_Y1(output Y, input A, B, C);
+ assign Y = (~A & ~B & C) | (~A & B & ~C) |
+            (A & ~B & ~C) | (A & ~B & C);
+endmodule
+```
+```
+// File: comb_Y2.v
+
+module comb_Y2(Y, A, B, C, D);
+
+    output Y;
+    input A, B, C, D;
+
+    assign Y = (~A & B & ~C & ~D) | (~A & B & ~C & D) |
+                (~A & B & C & ~D) | (~A & B & C & D) |
+                (A & ~B & C & D) | (A & B & ~C & ~D) |
+                (A & B & ~C & D);
+
+endmodule
+```
+#### 测试模块
+```
+// File: tb_comb_Y1.v
+`timescale 10ns / 1ns
+`include "comb_Y1.v"
+
+module tb_comb_Y1;
+
+    parameter STEP = 8;
+    integer k;
+
+    wire Y;
+    reg A, B, C;
+
+    comb_Y1 a(Y, A, B, C);
+
+    initial begin
+        {A, B, C} = 3'b0;
+        for ( k=1; k<STEP; k=k+1 )
+            #1 {A, B, C} = {A, B, C} + 1'b1;
+    end
+
+    initial begin
+        $monitor("At time %4t, A=%b, B=%b, C=%b, Y=%b",
+                    $time, A, B, C, Y);
+    end
+
+endmodule
+```
+```
+// File: tb_comb_Y2.v
+`timescale 10ns / 1ns
+`include "comb_Y2.v"
+
+module tb_comb_Y2;
+
+    parameter STEP = 16;
+    integer k;
+
+    wire Y;
+    reg A, B, C, D;
+
+    comb_Y2 a(Y, A, B, C, D);
+
+    initial begin
+        {A, B, C, D} = 4'b0;
+        for ( k=1; k<STEP; k=k+1 )
+            #1 {A, B, C, D} = {A, B, C, D} + 1'b1;
+    end
+
+    initial begin
+        $monitor("At time %4t, A=%b, B=%b, C=%b, D=%b, Y=%b",
+                    $time, A, B, C, D, Y);
+    end
+
+endmodule
+```
+#### 仿真结果
+![exp5-1.png](Simulation_results/exp5-1.png)
+![exp5-2.png](Simulation_results/exp5-2.png)
+![exp5-3.png](Simulation_results/exp5-3.png)
+![exp5-4.png](Simulation_results/exp5-4.png)
+
+## EXP2-6
+#### 设计模块
+```
+//File: ones_count.v
+module ones_count(output reg [3:0] count, input [7:0] dat_in);
+ integer k;
+ always@(dat_in)begin
+  count=4'b0;
+  for (k=0;k<8;k=k+1)
+   count = count+dat_in[k];
+ end
+endmodule
+```
+#### 测试模块
+```
+// File: tb_ones_count.v
+`timescale 10ns / 1ns
+`include "ones_count.v"
+
+module tb_ones_count;
+
+    parameter STEP = 256;
+    integer k;
+
+    wire [3:0] count;
+    reg [7:0] dat_in;
+
+    ones_count a(count, dat_in);
+
+    initial begin
+        dat_in = 8'b0;
+        for ( k=1; k<STEP; k=k+1 )
+            #1 dat_in = dat_in + 1'b1;
+    end
+
+    initial begin
+        $monitor("At time %4t, dat_in=%b, count=%b",
+                    $time, dat_in, count);
+    end
+
+endmodule
+```
+#### 仿真结果
+![exp6-1.png](Simulation_results/exp6-1.png)
+![exp6-2.png](Simulation_results/exp6-2.png)
+![exp6-3.png](Simulation_results/exp6-3.png)
+![exp6-4.png](Simulation_results/exp6-4.png)
+![exp6-5.png](Simulation_results/exp6-5.png)
+![exp6-6.png](Simulation_results/exp6-6.png)
+![exp6-7.png](Simulation_results/exp6-7.png)
+![exp6-8.png](Simulation_results/exp6-8.png)
+![exp6-9.png](Simulation_results/exp6-9.png)
+
+## EXP2-7
+#### 设计模块
+```
+//File: dec_counter.v
+module dec_counter(output reg [3:0] count, input clk, reset);
+ always@(posedge clk) begin
+ if(reset) count<=4'b0;
+ else begin
+  case (count)
+  4'd0: count <= 4'd1;
+  4'd1: count <= 4'd2;
+  4'd2: count <= 4'd3;
+  4'd3: count <= 4'd4;
+  4'd4: count <= 4'd5;
+  4'd5: count <= 4'd6;
+  4'd6: count <= 4'd7;
+  4'd7: count <= 4'd8;
+  4'd8: count <= 4'd9;
+  4'd9: count <= 4'd10;
+  4'd10: count <= 4'd0;
+  default: count <= 4'b0;
+  endcase
+ end
+ end
+
+endmodule
+```
+#### 测试模块
+```
+// File: tb_dec_counter.v
+`include "dec_counter.v"
+
+module tb_dec_counter;
+
+    wire [3:0] count;
+    reg clk, reset;
+
+    dec_counter a(count, clk, reset);
+
+    initial begin
+        clk = 1'b0;
+        forever #20 clk = ~clk;
+    end
+
+    initial begin
+        reset = 1'b0;
+        forever #150 reset = ~reset;
+    end
+
+    initial begin
+        $monitor("At time %4t, reset=%b, count=%d",
+                    $time, reset, count);
+    end
+
+endmodule
+```
+#### 仿真结果
+![exp7-1.png](Simulation_results/exp7-1.png)
+![exp7-2.png](Simulation_results/exp7-2.png)
+
+## EXP2-8
+#### 设计模块
+#### 测试模块
+#### 仿真结果
