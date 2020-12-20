@@ -586,10 +586,152 @@ endmodule
 
 ## EXP2-10
 #### 设计模块
+```verilog
+//File: filter.v
+module filter(sig_out, clock, reset, sig_in); 
+ output sig_out; 
+ input clock, reset, sig_in; 
+ 
+ reg [3:0] data; 
+ reg dout; 
+ 
+ always @(posedge clock) begin 
+ if (!reset) begin 
+ data <= 4'b0; 
+ dout <= 1'b0; 
+ end 
+ else begin 
+ data <= {data[2:0], sig_in}; 
+ 
+ case ( { &data[3:1], &(~data[3:1])} ) 
+ 2'b01: dout <= 1'b0; 
+ 2'b10: dout <= 1'b1; 
+ 2'b11: dout <= ~dout; 
+ default: ; 
+ endcase 
+ end 
+ end 
+ assign sig_out = dout; 
+endmodule 
+```
 #### 测试模块
+```verilog
+//File: tb_filter.v
+
+`include "filter.v" 
+module tb_filter; 
+ wire p_o; 
+ reg p_clk, p_rst, p_i; 
+ 
+ filter u0(.sig_out(p_o), .clock(p_clk), .reset(p_rst), .sig_in(p_i)); 
+ 
+ initial begin 
+ p_clk = 0; 
+ forever #5 p_clk = ~p_clk; 
+ end 
+ 
+ initial begin 
+ p_rst = 1'b0; 
+ #23 p_rst = 1'b1; 
+ end 
+ 
+ integer k; 
+ reg [31:0] din; 
+ initial begin 
+ din = 32'b1101_0010_0000_0111_1101_1111_0000_0001; 
+ #10; 
+ for (k=0; k<32; k=k+1) 
+ #10 p_i = din[k]; 
+ end 
+ 
+ initial 
+ $monitor( "At time %t, reset=%b, sig_in=%b, sig_out=%b", 
+ $time, p_rst, p_i, p_o); 
+endmodule 
+```
 #### 仿真结果
+![exp10-1.png](Simulation_results/exp10-1.png)
+![exp10-2.png](Simulation_results/exp10-2.png)
 
 ## EXP2-11
 #### 设计模块
+```verilog
+// File: counter8b_updown.v 
+module counter8b_updown(output [7:0] count, input clk, reset, dir); 
+ reg [7:0] count0,  count1;  
+ always @( posedge clk or negedge reset ) 
+ begin 
+  if ( reset == 1'b0 ) begin 
+   count0 <= 8'b0;  
+   count1 <= 8'b1111_1111;  
+  end 
+ else if ( dir ) 
+  count0 <= count0 + 1;  
+ else 
+  count1 <= count1 - 1;  
+ end 
+assign count = (dir) ?  count0 : count1; 
+endmodule 
+```
 #### 测试模块
+```verilog
+// File: tb_counter8b_updown.v 
+
+`include "counter8b_updown.v" 
+
+module tb_counter8b_updown();  
+ wire [7:0] p_cnt;  
+ reg p_clk,  p_rst,  p_dir;  
+
+ initial begin 
+  p_clk = 0;  
+  forever #5 p_clk = ~p_clk;  
+ end 
+
+ initial begin 
+  #5 p_rst = 1'b0;  
+  #2 p_dir = 1'b1;  
+  #10 p_rst = 1'b1;  
+  #80 p_rst = 1'b0;  
+  #2 p_dir = 1'b0;  
+  #10 p_rst = 1'b1;  
+  #100 p_dir = 1'b1;  
+ end 
+
+ counter8b_updown m0(.count(p_cnt), .clk(p_clk), .reset(p_rst), .dir(p_dir) );
+ initial 
+ $monitor("At time %t, <----> count=%b, dir=%b" ,  $time,  p_cnt,  p_dir ); 
+
+endmodule 
+```
+#### 仿真结果
+![exp11-1.png](Simulation_results/exp11-1.png)
+![exp11-2.png](Simulation_results/exp11-2.png)
+
+
+## EXP2-12
+#### 设计模块
+```verilog
+```
+#### 测试模块
+```verilog
+```
+#### 仿真结果
+
+## EXP2-13
+#### 设计模块
+```verilog
+```
+#### 测试模块
+```verilog
+```
+#### 仿真结果
+
+## EXP2-14
+#### 设计模块
+```verilog
+```
+#### 测试模块
+```verilog
+```
 #### 仿真结果
