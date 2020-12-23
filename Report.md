@@ -711,23 +711,349 @@ endmodule
 
 ## EXP2-12
 #### 设计模块
+<!-- 这里用ANSI-C风格传递参数似乎会出问题 -->
+<!-- ~操作，~8`b1111_1111 -> 9'b1_0000_0000-->
+<!-- 组合逻辑，case语句阻塞赋值 -->
 ```verilog
+module ALU(c_out, sum, oper, a, b, c_in);
+
+    output reg [7:0] sum;
+    output reg c_out;
+    input [2:0] oper;
+    input [7:0] a;
+    input [7:0] b;
+    input c_in;
+
+    always @ ( * ) begin
+        case (oper)
+            3'b000: {c_out, sum} <= a + b + c_in;   // and
+            3'b001: {c_out, sum} <= a + ~b + c_in;  // subtract
+            3'b010: {c_out, sum} <= ~a + b + ~c_in; // subtract_a
+            3'b011: {c_out, sum} <= {1'b0, a | b};  // or_ab
+            3'b100: {c_out, sum} <= {1'b0, a & b};  // and_ab
+            3'b101: {c_out, sum} <= {1'b0, ~a & b}; // not_ab
+            3'b110: {c_out, sum} <= {1'b0, a ^ b};  // exor
+            3'b111: {c_out, sum} <= {1'b0, a ~^ b}; // exnor
+            default: {c_out, sum} <= 9'bx;
+        endcase
+    end
+endmodule
 ```
 #### 测试模块
 ```verilog
+// File: tb_ALU.v
+
+`include "ALU.v"
+
+module tb_ALU;
+
+    parameter STEP = 8;
+    integer k;
+
+    wire c_out, sum;
+    reg [2:0] oper;
+    reg [7:0] a;
+    reg [7:0] b;
+    reg c_in;
+
+    ALU c(c_out, sum, oper, a, b, c_in);
+
+    initial begin
+        oper = 3'b0;
+        for ( k=1; k<STEP; k=k+1 )
+            #5 oper = oper + 3'b1;
+    end
+
+    initial begin
+        a = 8'b0;
+        forever #5 a = {a[7:0], $random % 2};
+    end
+
+    initial begin
+        b = 8'b0;
+        forever #10 b = {b[7:0], $random % 2};
+    end
+
+    initial begin
+        c_in = 1'b0;
+        forever #15 c_in = $random % 2;
+    end
+
+    initial begin
+        $monitor("At time %4t, a=%b, b=%b, c_in=%b, oper=%b, sum=%b, c_out=%b",
+                    $time, a, b, c_in, oper, sum, c_out);
+    end
+
+endmodule
 ```
 #### 仿真结果
+![exp12-1.png](Simulation_results/exp12-1.png)
+![exp12-2.png](Simulation_results/exp12-2.png)
+
 
 ## EXP2-13
 #### 设计模块
 ```verilog
+// File: shift_counter.v
+module shift_counter(count, clk, reset);
+ output [7:0] count;
+ input clk;
+ input reset;
+ parameter CNTSUP = 17;
+ reg [4:0] cnt;
+ always @( posedge clk ) begin
+  if ( reset )
+   cnt <= 5'b0;
+  else 
+  begin
+  if (cnt < CNTSUP)
+   cnt <= cnt + 1'b1;
+  else
+   cnt <= 5'b0;
+  end
+ end
+
+ function [7:0] val( input [4:0] c );
+ begin
+ case ( c)
+  0: val = 8'b0000_0001;
+  1: val = 8'b0000_0001;
+  2: val = 8'b0000_0001;
+  3: val = 8'b0000_0001;
+  4: val = 8'b0000_0010;
+  5: val = 8'b0000_0100;
+  6: val = 8'b0000_1000;
+  7: val = 8'b0001_0000;
+  8: val = 8'b0010_0000;
+  9: val = 8'b0100_0000;
+  10: val = 8'b1000_0000;
+  11: val = 8'b0100_0000;
+  12: val = 8'b0010_0000;
+  13: val = 8'b0001_0000;
+  14: val = 8'b0000_1000;
+  15: val = 8'b0000_0100;
+  16: val = 8'b0000_0010;
+  17: val = 8'b0000_0001;
+  default:val = 8'b0000_0001;
+ endcase
+ end
+ endfunction
+ assign count = val(cnt);
+endmodule
 ```
 #### 测试模块
 ```verilog
+`include "shift_counter.v"
+`define PULSE 5
+module tb_shift_counter;
+ wire [7:0] p_cnt;
+ reg p_clk;
+ reg p_rst;
+ initial begin
+  p_rst = 1'b1;
+  #25 p_rst = 1'b0;
+ end
+
+ initial begin
+ p_clk = 1'b0;
+ forever #`PULSE p_clk = ~p_clk;
+ end
+
+ shift_counter u0(.count(p_cnt), .clk(p_clk), .reset(p_rst));
+ initial
+ $monitor( "At time %4t, reset=%b, count=%b", $time, p_rst, p_cnt );
+endmodule
 ```
 #### 仿真结果
+![exp13-1.png](Simulation_results/exp13-1.png)
+![exp13-2.png](Simulation_results/exp13-2.png)
 
 ## EXP2-14
+#### 设计模块
+```verilog
+// File: sram.v
+
+module sram(dout, din, addr, wr, rd, cs);
+
+    output [7:0] dout;
+    input [7:0] din;
+    input [7:0] addr;
+    input wr, rd, cs;
+
+    reg [7:0] sram [255:0];
+    reg [7:0] data;
+
+    assign dout = (cs && !rd) ? data : 8'bz;
+
+    always @ ( posedge wr ) begin
+        if (cs) sram[addr] <= din;
+    end
+
+    always @ ( negedge rd ) begin
+        if (cs) data <= sram[addr];
+    end
+
+endmodule
+```
+#### 测试模块
+```verilog
+// File: tb_sram.v
+
+`include "sram.v"
+
+module tb_sram;
+
+    wire [7:0] dout;
+    reg [7:0] din;
+    reg [7:0] addr;
+    reg wr, rd, cs;
+
+    sram a(dout, din, addr, wr, rd, cs);
+
+    initial begin
+        cs = 1'b0;
+        #10 cs = 1'b1;
+        #10 cs = 1'b0;
+        #10 cs = 1'b1;
+    end
+
+    initial begin
+        din = 8'b1010_0101;
+        addr = 8'b0101_1010;
+        #100 addr = 8'b1010_0101;
+    end
+
+    initial begin
+        wr = 1'b0;
+        rd = 1'b1;
+        forever begin
+            #10;
+            wr = $random % 2;
+            rd = $random % 2;
+        end
+    end
+
+    initial begin
+        $monitor("At time %4t, din=%b, addr=%b, cs=%b, wr=%b, rd=%b, dout=%b",
+                    $time, din, addr, cs, wr, rd, dout);
+    end
+
+endmodule
+```
+#### 仿真结果
+![exp14-1.png](Simulation_results/exp14-1.png)
+![exp14-2.png](Simulation_results/exp14-2.png)
+
+## EXP2-15
+#### 设计模块
+```verilog
+// File: seq_detect.v
+
+module seq_detect(flag, din, clk, rst_n);
+
+    output reg flag;
+    input din, clk, rst_n;
+
+    parameter S10 = 9'b0_0000_0001; // IDLE(0)
+    parameter S11 = 9'b0_0000_0010; // A(0)
+    parameter S12 = 9'b0_0000_0100; // B(0)
+    parameter S13 = 9'b0_0000_1000; // C(0)
+    parameter S14 = 9'b0_0001_0000; // D(1)
+
+    parameter S20 = 9'b0_0000_0001; // IDLE(0)
+    parameter S21 = 9'b0_0010_0000; // E(0)
+    parameter S22 = 9'b0_0100_0000; // F(0)
+    parameter S23 = 9'b0_1000_0000; // G(0)
+    parameter S24 = 9'b1_0000_0000; // H(1)
+
+    reg [8:0] state1;   // 1101
+    reg [8:0] state2;   // 0110
+    reg flag1, flag2;
+
+    always @ ( * ) begin
+        flag <= flag1 | flag2;
+    end
+
+    always @ ( negedge clk ) begin
+        if (!rst_n) begin
+            flag1 <= 1'b0;
+            state1 <= S10;
+        end else begin
+            flag1 <= (state1 == S14) ? 1'b1 : 1'b0;
+            case (state1)
+                S10: state1 <= (din) ? S11 : S10;
+                S11: state1 <= (din) ? S12 : S10;
+                S12: state1 <= (din) ? S12 : S13;
+                S13: state1 <= (din) ? S14 : S10;
+                S14: state1 <= (din) ? S12 : S10;
+                default: begin state1 <= S10; flag1 <= 1'b0; end
+            endcase
+        end
+    end
+
+    always @ ( negedge clk ) begin
+        if (!rst_n) begin
+            flag2 <= 1'b0;
+            state2 <= S20;
+        end else begin
+            flag2 <= (state2 == S24) ? 1'b1 : 1'b0;
+            case (state2)
+                S20: state2 <= (din) ? S20 : S21;
+                S21: state2 <= (din) ? S22 : S21;
+                S22: state2 <= (din) ? S23 : S21;
+                S23: state2 <= (din) ? S20 : S24;
+                S24: state2 <= (din) ? S22 : S21;
+                default: begin state2 <= S20; flag2 <= 1'b0; end
+            endcase
+        end
+    end
+
+endmodule
+```
+#### 测试模块
+```verilog
+// File: tb_seq_detect.v
+
+`include "seq_detect.v"
+
+module tb_seq_detect;
+
+    parameter STEP = 32;
+    integer k;
+
+    wire flag;
+    reg [31:0] data;
+    reg din,clk, rst_n;
+
+    seq_detect a(flag, din, clk, rst_n);
+
+    initial begin
+        clk = 1'b0;
+        forever #10 clk = ~clk;
+    end
+
+    initial begin
+        rst_n = 1'b0;
+        #50 rst_n = 1'b1;
+    end
+
+    initial begin
+        data = 32'b1100_0110_0100_0110_1010_0100_1010_0010;
+        for ( k=1; k<STEP; k=k+1 ) begin
+            #20;
+            din = data[31];
+            data = data << 1;
+        end
+    end
+
+endmodule
+```
+#### 仿真结果
+![exp15-1.png](Simulation_results/exp15-1.png)
+#### 设计说明--状态转移图
+![exp15-2.png](Simulation_results/exp15-2.png)
+
+## EXP2-16
 #### 设计模块
 ```verilog
 ```
