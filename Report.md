@@ -1,6 +1,11 @@
+<font face="宋体">
+
 # 数字系统设计作业报告
 * 学号：518021910628
 * 姓名：吴小茜
+* 日期：2020.12.23
+
+&nbsp;
 
 <!-- 设计模块，测试模块，波形图，显示输出，设计说明 -->
 
@@ -31,6 +36,8 @@ endmodule
 ```
 #### 仿真结果
 ![exp1.png](Simulation_results/exp1.png)
+
+&nbsp;
 
 ## EXP2-2
 #### 设计模块
@@ -126,6 +133,8 @@ endmodule
 
 #### 仿真结果
 ![exp3-1.png](Simulation_results/exp3-1.png)
+
+#### 显示输出
 ![exp3-2.png](Simulation_results/exp3-2.png)
 
 ### b) 4选1多路选择器
@@ -176,10 +185,12 @@ endmodule
 
 #### 仿真结果
 ![exp3-3.png](Simulation_results/exp3-3.png)
+#### 显示输出
 ![exp3-4.png](Simulation_results/exp3-4.png)
 ![exp3-5.png](Simulation_results/exp3-5.png)
 ![exp3-6.png](Simulation_results/exp3-6.png)
 
+&nbsp;
 ## EXP2-4
 #### 设计模块——利用门原语设计
 ```verilog
@@ -258,8 +269,11 @@ endmodule
 ```
 #### 仿真结果
 ![exp4-1.png](Simulation_results/exp4-1.png)
+
+#### 显示输出
 ![exp4-2.png](Simulation_results/exp4-2.png)
 
+&nbsp;
 ## EXP2-5
 #### 设计模块
 ```verilog
@@ -269,9 +283,8 @@ module comb_Y1(output Y, input A, B, C);
             (A & ~B & ~C) | (A & ~B & C);
 endmodule
 ```
-```
+```verilog
 // File: comb_Y2.v
-
 module comb_Y2(Y, A, B, C, D);
 
     output Y;
@@ -343,10 +356,13 @@ endmodule
 ```
 #### 仿真结果
 ![exp5-1.png](Simulation_results/exp5-1.png)
-![exp5-2.png](Simulation_results/exp5-2.png)
 ![exp5-3.png](Simulation_results/exp5-3.png)
+
+#### 显示输出
+![exp5-2.png](Simulation_results/exp5-2.png)
 ![exp5-4.png](Simulation_results/exp5-4.png)
 
+&nbsp;
 ## EXP2-6
 #### 设计模块
 ```verilog
@@ -392,6 +408,8 @@ endmodule
 #### 仿真结果
 ![exp6-1.png](Simulation_results/exp6-1.png)
 ![exp6-2.png](Simulation_results/exp6-2.png)
+
+#### 显示输出
 ![exp6-3.png](Simulation_results/exp6-3.png)
 ![exp6-4.png](Simulation_results/exp6-4.png)
 ![exp6-5.png](Simulation_results/exp6-5.png)
@@ -400,6 +418,7 @@ endmodule
 ![exp6-8.png](Simulation_results/exp6-8.png)
 ![exp6-9.png](Simulation_results/exp6-9.png)
 
+&nbsp;
 ## EXP2-7
 #### 设计模块
 ```verilog
@@ -458,8 +477,10 @@ endmodule
 ```
 #### 仿真结果
 ![exp7-1.png](Simulation_results/exp7-1.png)
+#### 显示输出
 ![exp7-2.png](Simulation_results/exp7-2.png)
 
+&nbsp;
 ## EXP2-8
 #### 设计模块
 ```verilog
@@ -503,20 +524,23 @@ endmodule
 ```
 #### 仿真结果
 ![exp8-1.png](Simulation_results/exp8-1.png)
+
+#### 显示输出
 ![exp8-2.png](Simulation_results/exp8-2.png)
 ![exp8-3.png](Simulation_results/exp8-3.png)
 
+&nbsp;
 ## EXP2-9
 #### 设计模块
 ```verilog
 //File: LFSR.v
 module LFSR(q, clk, rst_n, load, din);
 
-    output reg [1:26] q;    // 26 bit data output.
-    input clk;              // Clock input.
-    input rst_n;            // Synchronous reset input.
-    input load;             // Synchronous load input.
-    input [1:26] din;       // 26 bit parallel data input.
+    output reg [1:26] q;    
+    input clk;              
+    input rst_n;            
+    input load;            
+    input [1:26] din;       
 
     always @ ( posedge clk ) begin
         if (!rst_n) q <= 26'b0;
@@ -566,7 +590,7 @@ module tb_LFSR();
   p_din = 26'd0; 
  
  #88 p_load = 1'b1; 
- p_din = 26'd4668_5317; // 26'b10_1100_1000_0101_1100_1000_0101 
+ p_din = 26'd4668_5317; 
  #10 p_load = 1'b0; 
  
  #80 p_load = 1'b1; 
@@ -582,10 +606,13 @@ endmodule
 ```
 #### 仿真结果
 ![exp9-1.png](Simulation_results/exp9-1.png)
+#### 显示输出
 ![exp9-2.png](Simulation_results/exp9-2.png)
 
+&nbsp;
 ## EXP2-10
 #### 设计模块
+<!-- 隐式的c时序，ase语句？ -->
 ```verilog
 //File: filter.v
 module filter(sig_out, clock, reset, sig_in); 
@@ -651,8 +678,10 @@ endmodule
 ```
 #### 仿真结果
 ![exp10-1.png](Simulation_results/exp10-1.png)
+#### 显示输出
 ![exp10-2.png](Simulation_results/exp10-2.png)
 
+&nbsp;
 ## EXP2-11
 #### 设计模块
 ```verilog
@@ -706,15 +735,17 @@ endmodule
 ```
 #### 仿真结果
 ![exp11-1.png](Simulation_results/exp11-1.png)
+#### 显示输出
 ![exp11-2.png](Simulation_results/exp11-2.png)
 
-
+&nbsp;
 ## EXP2-12
 #### 设计模块
 <!-- 这里用ANSI-C风格传递参数似乎会出问题 -->
 <!-- ~操作，~8`b1111_1111 -> 9'b1_0000_0000-->
 <!-- 组合逻辑，case语句阻塞赋值 -->
 ```verilog
+//File: ALU.v
 module ALU(c_out, sum, oper, a, b, c_in);
 
     output reg [7:0] sum;
@@ -788,9 +819,10 @@ endmodule
 ```
 #### 仿真结果
 ![exp12-1.png](Simulation_results/exp12-1.png)
+#### 显示输出
 ![exp12-2.png](Simulation_results/exp12-2.png)
 
-
+&nbsp;
 ## EXP2-13
 #### 设计模块
 ```verilog
@@ -866,13 +898,14 @@ endmodule
 ```
 #### 仿真结果
 ![exp13-1.png](Simulation_results/exp13-1.png)
+#### 显示输出
 ![exp13-2.png](Simulation_results/exp13-2.png)
 
+&nbsp;
 ## EXP2-14
 #### 设计模块
 ```verilog
 // File: sram.v
-
 module sram(dout, din, addr, wr, rd, cs);
 
     output [7:0] dout;
@@ -898,7 +931,6 @@ endmodule
 #### 测试模块
 ```verilog
 // File: tb_sram.v
-
 `include "sram.v"
 
 module tb_sram;
@@ -942,8 +974,10 @@ endmodule
 ```
 #### 仿真结果
 ![exp14-1.png](Simulation_results/exp14-1.png)
+#### 显示输出
 ![exp14-2.png](Simulation_results/exp14-2.png)
 
+&nbsp;
 ## EXP2-15
 #### 设计模块
 ```verilog
@@ -1051,13 +1085,146 @@ endmodule
 #### 仿真结果
 ![exp15-1.png](Simulation_results/exp15-1.png)
 #### 设计说明--状态转移图
-![exp15-2.png](Simulation_results/exp15-2.png)
+![exp15-2.jpg](Simulation_results/exp15-2.jpg)
 
+&nbsp;
 ## EXP2-16
 #### 设计模块
 ```verilog
+// File: mealy.v
+
+module mealy(flag, din, clk, rst);
+
+    output reg flag;
+    input din, clk, rst;
+
+    parameter S0 = 8'b0000_0001;  // IDLE(0)
+    parameter S1 = 8'b0000_0010;  // A(0)
+    parameter S2 = 8'b0000_0100;  // B(0)
+    parameter S3 = 8'b0000_1000;  // C(0)
+    parameter S4 = 8'b0001_0000;  // D(0)
+    parameter S5 = 8'b0010_0000;  // E(0)
+    parameter S6 = 8'b0100_0000;  // F(0)
+    parameter S7 = 8'b1000_0000;  // G(0)
+
+    reg [8:0] state;
+
+    always @ ( posedge rst ) begin
+        flag <= 1'b0;
+        state <= S0;
+    end
+
+    always @ ( posedge clk ) begin
+        case (state)
+            S0: if (din) begin state <= S0; flag <= 1'b0; end
+                else begin state <= S1; flag <= 1'b0; end
+            S1: if (din) begin state <= S2; flag <= 1'b0; end
+                else begin state <= S1; flag <= 1'b0; end
+            S2: if (din) begin state <= S0; flag <= 1'b0; end
+                else begin state <= S3; flag <= 1'b0; end
+            S3: if (din) begin state <= S4; flag <= 1'b0; end
+                else begin state <= S1; flag <= 1'b0; end
+            S4: if (din) begin state <= S0; flag <= 1'b0; end
+                else begin state <= S5; flag <= 1'b0; end
+            S5: if (din) begin state <= S6; flag <= 1'b0; end
+                else begin state <= S1; flag <= 1'b0; end
+            S6: if (din) begin state <= S0; flag <= 1'b0; end
+                else begin state <= S7; flag <= 1'b0; end
+            S7: if (din) begin state <= S6; flag <= 1'b1; end
+                else begin state <= S1; flag <= 1'b0; end
+            default: begin state <= S0; flag <= 1'b0; end
+        endcase
+    end
+
+endmodule
+```
+```verilog
+// File: moore.v
+
+module moore(flag, din, clk, rst);
+
+    output reg flag;
+    input din, clk, rst;
+
+    parameter S0 = 9'b0_0000_0001;  // IDLE(0)
+    parameter S1 = 9'b0_0000_0010;  // A(0)
+    parameter S2 = 9'b0_0000_0100;  // B(0)
+    parameter S3 = 9'b0_0000_1000;  // C(0)
+    parameter S4 = 9'b0_0001_0000;  // D(0)
+    parameter S5 = 9'b0_0010_0000;  // E(0)
+    parameter S6 = 9'b0_0100_0000;  // F(0)
+    parameter S7 = 9'b0_1000_0000;  // G(0)
+    parameter S8 = 9'b1_0000_0000;  // H(1)
+
+    reg [8:0] state;
+
+    always @ ( posedge rst ) begin
+        flag <= 1'b0;
+        state <= S0;
+    end
+
+    always @ ( posedge clk ) begin
+        flag <= (state == S8) ? 1'b1 : 1'b0;
+        case (state)
+            S0: state <= (din) ? S0 : S1;
+            S1: state <= (din) ? S2 : S1;
+            S2: state <= (din) ? S0 : S3;
+            S3: state <= (din) ? S4 : S1;
+            S4: state <= (din) ? S0 : S5;
+            S5: state <= (din) ? S6 : S1;
+            S6: state <= (din) ? S0 : S7;
+            S7: state <= (din) ? S8 : S1;
+            S8: state <= (din) ? S0 : S7;
+            default: begin state <= S0; flag <= 1'b0; end
+        endcase
+    end
+
+endmodule
 ```
 #### 测试模块
 ```verilog
+// File: top.v
+
+`include "mealy.v"
+`include "moore.v"
+
+module top;
+
+    parameter STEP = 32;
+    integer k;
+
+    wire mealy_flag, moore_flag;
+    reg [31:0] data;
+    reg din, clk, rst;
+
+    mealy a(mealy_flag, din, clk, rst);
+    moore b(moore_flag, din, clk, rst);
+
+    initial begin
+        clk = 1'b0;
+        forever #10 clk = ~clk;
+    end
+
+    initial begin
+        rst = 1'b0;
+        #15 rst = 1'b1;
+    end
+
+    initial begin
+        data = 32'b0110_1010_1010_0011_0110_0001_0101_0101;
+        for ( k=0; k<STEP; k=k+1) begin
+            #20;
+            din = data[0];
+            data = data >> 1;
+        end
+    end
+
+endmodule
 ```
 #### 仿真结果
+![exp16-1.png](Simulation_results/exp16-1.png)
+
+#### 设计说明--状态转移图
+![exp16-2.jpg](Simulation_results/exp16-2.jpg)
+![exp16-3.jpg](Simulation_results/exp16-3.jpg)
+</font>
