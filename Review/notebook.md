@@ -231,5 +231,89 @@ mem[1] = 0;
 * 运算优先级
 
 ## Chap4 门级建模
+* 当任意一个输入端口的值发生变化是，立即重新计算输出端口值
+* 原语：and, nand, or, nor, xor异或, xnor同或
+* 引用门原语实例时可以没有实例名
+* 输入端口超过两个时，先计算两个，得到的结果在和第三个输入值进行运算
+* **真值表**
+* 缓冲器buf，非门not，多个输出，所有输出端的值相同；一个输入，端口列表的最后一个, x/z->x
+* 三态门：带控制端的缓冲器/非门，bufif1,bufif0,notif1,notif0,**若控制信号无效则输出z**，**真值表**
+* 门实例数组
+```verilog
+wire [7:0] OUT, IN1, IN2;// 门实例数组引用
+nand n_gate[7:0](OUT, IN1, IN2);// 与下面 8 条实例引用语句相同
+nand n_gate0(OUT[0], IN1[0], IN2[0]);
+nand n_gate1(OUT[1], IN1[1], IN2[1]);
+...
+```
+* 门延迟
+  * 上升延迟: 0/x/z->1, 下降延迟: 1/x/z->0, 关断延迟: 0/1/x->z
+  * 最大、最小和典型延迟
+  ```verilog
+  // 3种延时（上升、下降和关断）都等于 delay_time 表示的延时时间
+  and #(delay_time) a1(out, i1, i2);
+  // 说明了上升延时和下降延时时间，关断延时时间 = min(rise_val, fall_val)
+  and #(rise_val, fall_val) a2(out, i1, i2);
+  // 说明了上升延时、下降延时和关断延时时间
+  bufif0 #(rise_val, fall_val, turnoff_val) b1 (out, in, control);
+  ```
+  ```verilog
+  // One delay 
+  // 如果选择使用 mindelays, delay= 4 
+  // 如果选择使用 typdelays, delay= 5 
+  // 如果选择使用 maxdelays, delay= 6 
+  and #(4:5:6) a1(out, i1, i2); 
+  
+  // Two delays 
+  // 如果选择使用 mindelays, rise= 3, fall= 5, turn-off = min(3,5) 
+  // 如果选择使用 typdelays, rise= 4, fall= 6, turn-off = min(4,6) 
+  // 如果选择使用 maxdelays, rise= 5, fall= 7, turn-off = min(5,7) 
+  and #(3:4:5, 5:6:7) a2(out, i1, i2); 
+  
+  // Three delays 
+  // 如果选择使用 mindelays, rise= 2 fall= 3 turn-off = 4 
+  // 如果选择使用 typdelays, rise= 3 fall= 4 turn-off = 5 
+  // 如果选择使用 maxdelays, rise= 4 fall= 5 turn-off = 6 
+  and #(2:3:4, 3:4:5, 4:5:6) a3(out, i1,i2);
+  ```
+  ```verilog
+  //判断仿真结果
+  module gate_delay(out,a,b,c);
+    output out;
+    input a,b,c;
+    wire e;
+
+    and #5 a1(e,a,b);
+    or #4 u1(out,e,c);
+  endmodule
+
+  `include "gate_delay.v"
+  module tb_gate_delay;
+    reg A,B,C;
+    wire OUT; 
+
+    gate_delay m1(OUT,A,B,C);
+
+    initial begin
+    A=1'b0;B=1'b0;C=1'b0;
+    #10 A=1'b1;B=1'b1;C=1'b1;
+    #10 A=1'b1;B=1'b0;C=1'b0;
+    #20 $finish;
+    end
+  endmodule
+  ```
+  ```verilog
+  //四位全加器
+  // Instantiate four 1-bit full adders. 
+  fulladd fa0(c1, sum[0], a[0], b[0], cin); 
+  fulladd fa1(c2, sum[1], a[1], b[1], c1 ); 
+  fulladd fa2(c3, sum[2], a[2], b[2], c2 ); 
+  fulladd fa3(cout, sum[3], a[3], b[3], c3 );
+
+  // Instantiate four 1-bit full adders. 注意顺序，从最高位到最低位对应
+  fulladd fa0[0:3] ( {cout,c3,c2,c1}, sum, a, b, {c3,c2,c1,cin});
+  ```
+
+## Chap5 数据流建模
 
   </font>
