@@ -315,5 +315,98 @@ nand n_gate1(OUT[1], IN1[1], IN2[1]);
   ```
 
 ## Chap5 数据流建模
+* 连续赋值语句，**要写关键字assign**，只要右边表达式中操作数上有事件发生，表达式立即计算，新结果赋值给左边的线网
+```verilog
+assign mux = ( s == 0 ) ? A : ’bz, // 逗号（,）结尾
+      mux = ( s == 1 ) ? B : ’bz, // 逗号（,）结尾
+      mux = ( s == 2 ) ? C : ’bz, // 逗号（,）结尾
+      mux = ( s == 3 ) ? D : ’bz; // 最后是分号（;）
 
+// 连续赋值，out 必须是线网类型变量， 
+// i1 和 i2 可以是 wire 类型， 也可以是 reg 类型 
+assign out = i1 & i2
+
+//标量型线网向量
+wire scalared [63:0] bus; // 可以位选择/部分位选择
+//向量型线网向量
+wire vectored [31:0] data; // 不许以位选择/部分位选择
+
+wire cout, cin;
+wire [3 : 0] sum, a, b;
+assign {cout, sum} = a + b + cin;
+
+//在线网声明的同时对其赋值，隐式连续赋值
+// 普通的连续赋值
+wire out;
+assign out = in1 & in2;
+// 隐式连续赋值，实现与上面两条语句相同的功能
+wire out = in1 & in2;
+wire clear = 1’b1;
+
+//隐式线网声明
+// 连续赋值, out 是一个线网变量.
+wire i1, i2;
+assign out = i1 & i2; // 虽然没有声明 out 为线网类型
+```
+* 延时
+  ```verilog
+  //普通赋值延时
+  assign #10 out = in1 & in2;
+  //惯性延时——小于延时的脉冲将被取消，脉冲宽度小于赋值的延时的输入变化不会对输出产生影响
+  //信号保持的持续时间必须大于延时宽度
+
+  // 隐式连续赋值延时
+  wire #10 out = in1 & in2;
+  // 等效于
+  wire out;
+  assign #10 out = in1 & in2;
+
+  wire #5 rd; //驱动源的值改变与线网 rd 本身之间的延时
+  assign #2 rd = a & b; //延时为7
+
+  //既有线网延时又有赋值延时，信号保持的持续时间必须大于二个延时的最大值
+  // 线网延时
+  wire #10 out;
+  assign out = in1 & in2;
+  // 等效语句
+  wire out;
+  assign #10 out = in1 & in2;
+  ```
+  ![ch05_1.jpg](images\ch05_1.jpg)
+* 延迟
+  ```verilog
+  assign #(rise, fall, turn-off) target = expression; //?
+  ```
+```verilog
+//mux4_to_1
+// 产生输出的逻辑方程
+assign out = (~s1 & ~s0 & i0)|
+(~s1 & s0 & i1)|
+( s1 & ~s0 & i2)|
+( s1 & s0 & i3) ;
+// 使用条件操作符 
+assign out = s1 ? ( s0 ? i3 : i2) : (s0 ? i1 : i0);
+
+//三态门
+assign y1=(ctrl)?in:1'bz; //bufif1
+
+//3-8译码器
+module decoder3x8 ( output [7:0] fout, input [2:0] din );
+  assign fout = (din == 3'b000 ) ? 8'b0000_0001 : 
+                (din == 3'b001 ) ? 8'b0000_0010 : 
+                (din == 3'b010 ) ? 8'b0000_0100 : 
+                (din == 3'b011 ) ? 8'b0000_1000 : 
+                (din == 3'b100 ) ? 8'b0001_0000 : 
+                (din == 3'b101 ) ? 8'b0010_0000 : 
+                (din == 3'b110 ) ? 8'b0100_0000 : 
+                (din == 3'b111 ) ? 8'b1000_0000 : 8'h00;
+endmodule
+```
+
+## Chap6 行为建模
+## Chap7 任务和函数
+## Chap8 用户定义原语UDP
+## Chap10 组合逻辑设计
+## Chap11 时序电路设计
+## Chap12 使用Verilog_HDL进行综合
   </font>
