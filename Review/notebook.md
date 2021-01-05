@@ -275,6 +275,8 @@ nand n_gate1(OUT[1], IN1[1], IN2[1]);
   // 如果选择使用 typdelays, rise= 3 fall= 4 turn-off = 5 
   // 如果选择使用 maxdelays, rise= 4 fall= 5 turn-off = 6 
   and #(2:3:4, 3:4:5, 4:5:6) a3(out, i1,i2);
+
+  and #4 a1(e,a,b), u1(out,e,c);//两个门的延迟都是4
   ```
   ```verilog
   //判断仿真结果
@@ -404,9 +406,485 @@ endmodule
 ```
 
 ## Chap6 行为建模
+* initial 和 always 语句不能嵌套使用
+* 多个 initial 或 always 语句并发执行，执行顺序与其在模块的顺序无关
+* 仿真时，所有的 initial 和 always 语句都在 0 时刻开始执行
+* fork … join 将多条语句组合成一个并行语句块
+* 顺序语句块中可以包含并行语句块，并行语句块中可以包含顺序语句块
+* initial 和 always 过程语句只能对寄存器类型变量进行赋值
+```verilog
+module ex01;
+
+// 定义时钟变量
+reg clock;
+
+// 设置时钟变量的初值为 0
+initial clock = 0;
+
+// 在时钟变量声明时，将其初始化
+// 只适用模块一级的变量声明
+reg clock = 0;
+
+always @(*) begin: BLOCK1
+reg temp; // 不可初始化变量 temp
+temp = a;
+end
+endmodule
+```
+```verilog
+//使用 always 语句设计一个时钟发生器
+module clock_gen (output reg clock);
+// 在 0 时刻，初始化变量 clock
+initial
+clock = 1'b0;
+// 每半个周期翻转一次 clock，(time period = 20)
+always
+#10 clock = ~clock;
+initial
+#1000 $finish;
+endmodule
+```
+* initial 语句块用于测试模块的描述 —— 不可用于设计电路, always建议尽量避免用于测试模块中，如：testbench，top模块中
+* 时序控制
+  * 延时控制
+    * 常规延时控制：遇到该语句与开始执行该语句的时间间隔
+    * 延时不必是常量，可以是表达式
+    * 如果延时表达式的值为 x 或 z，与 0 延时等效
+    * 如果延时表达式的值为负时，其二进制补码作为延时
+    ```verilog
+    
+    module delay_neg;
+    reg clock;
+    reg [2:0] delay;
+    initial
+    clock = 1'b0;
+
+    initial
+    delay=-3;
+
+    initial
+    #(delay) clock = ~clock; //3'b101,5
+
+    endmodule
+    ```
+    * 内嵌赋值延时：遇到该语句后，首先立即计算右侧表达式的值，推迟指定的时间之后，再将这个值赋给左边的变量
+    * 带零延时控制的语句在执行时刻相同的多条语句中最后执行
+  * 事件控制
+    * 边沿触发事件控制
+      ```verilog
+      @ (posedge clock)
+        state0 = state1;
+
+      posedge （正沿） —— 正沿是下面变化的一种
+        0 → x
+        0 → z
+        0 → 1
+        x → 1
+        z → 1
+      
+      negedge（负沿） —— 负沿是下面变化的一种
+        1 → x
+        1 → z
+        1 → 0
+        x → 0
+        z → 0
+      
+      @(posedge clock) q = d; // 当 clock 正边沿到来时执行
+      @(negedge clock) q = d; // 当 clock 负边沿到来时执行
+      q = @(posedge clock) d; // 立即计算 d 的值， // 当 clock 正边沿到来时赋给 q
+      ```
+    * 电平敏感事件控制
+      ```verilog
+      @(clock) q = d; // 当 clock 的值发生变化时执行 
+      ```
+      ```verilog
+      @ flag y = a;
+      或写成：@flag;
+      y = a; // 当 flag 上发生事件，就执行赋值语句，如：原来是低电平（0），现在变成高电平（1），反之亦然
+      ```
+      * 敏感变量列表, 由 or 连接的多个信号变量, or 只是事件控制表达式中说明有不同事件关键字，并非逻辑或
+      * 在敏感列表中用逗号 , 代替 or
+      * 使用 @* 和 @(*), 表示对其后语句块中所有输入变量的变化都是敏感的
+    * 敏感列表事件控制, **wait等待电平敏感条件为真**
+      ```verilog
+      always
+        wait (count_enable) #20 count = count + 1
+      执行过程：
+      如果 count_enable 为 0，不执行后面的语句 ———— 只能为真
+      仿真程序会停到下来，直到其为真，如：1 （高电平）
+      ```
+    * 命名事件控制
+      ```verilog
+      // 定义一个事件：
+      received_dataevent received_data; 
+      // 在 clock 正边沿到来时刻进行检测
+      always @(posedge clock) begin 
+        if(last_data_packet) // 如果是最后一个数据帧 
+          -> received_data; // 触发事件 received_data
+        end
+      always @(received_data) // 等待事件 received_data 发生
+       // 当事件发生时，存储数据 
+      data_buf = {data_pkt[0], data_pkt[1], data_pkt[2], data_pkt[3]};
+      ```
+* 如果有标识符, 在语句块中可以声明寄存器变量,语句块可以用其标识符引用，如：使用禁止语句停止语句块的执行
+  ```verilog
+  initial 
+  begin : break_block 
+  i = 0; 
+  forever begin 
+  if (i==a) disable break_block; 
+  #1 i = i + 1; 
+  end 
+  end
+  ```
+* 顺序语句块:**语句的延时总是相对于前面的语句的完成时间**, 语句块可以有自己的名字 —— 称之为命名块
+* 并行语句块:**各语句的延时均以语句块的开始时间为基准**, 各语句中的延时和事件控制决定语句的执行顺序
+```veriloginitial
+begin
+pm_enable = 1'b0;
+#1 pm_enable = 1'b1;
+end
+initial
+begin : seq_a
+#4 pm_write = 6'd5;
+fork : par_a // 语句块的开始时间?
+#6 pm_select = 4'd7;
+begin : seq_b
+wdog_rst = pm_enable;
+#2 wdog_intr = wdog_rst;
+end
+# 2 frc_sel = 4'd3;
+# 4 pm_iter = 4'd2;
+# 8 itop = 4'd4;
+join
+# 8 pm_lock = 1'b1; //20
+# 2 pcell_id = 6'd52; //22
+# 6 $stop; //28
+end // 语句块的结束时间? 28
+```
+* 在过程语句结构的顺序语句块中，阻塞赋值语句按顺序执行,下一条语句必须等待上面的阻塞赋值完成后才能执行
+* 非阻塞赋值语句执行后计算右侧表达式的值，并不立即赋值,继续执行下一条语句,在当前时间步的其它计算完成后，再对左边目标赋值,同一时间步,执行下一条语句时，无需上一条赋值完成
+  ```verilog
+  module non_block;
+  reg [3:0] state;
+  initial begin
+  state=4'b0000; //0
+  #2 state=4'b1111; //2
+  state<=#5 4'b1010; //7
+  #3state=4'b0101; //5
+  end
+  endmodule
+
+  begin
+  a <= 4'd1;
+  a <= #10 4'd0;
+  a <= #5 4'd4;
+  end
+
+  fork
+  a = 4'd1;
+  a = #10 4'd0;
+  a = #5 4'd4;
+  join
+
+  `timescale 1ns/1ns
+  module nonblocking_d;
+  reg [3:0] a;
+  initial
+  begin
+  a <= 4'd1;
+  #10 a <= 4'd0; //10
+  #5 a <= 4'd4; //15
+  end
+  initial
+  $monitor("At time t=%4t, a=%4d", $time, a);
+  endmodule 
+
+
+  `timescale 1ns/1ns
+  module blocking_d;
+  reg [3:0] a;
+  initial
+  fork
+  a = 4'd1;
+  #10 a = 4'd0; //10
+  #5 a = 4'd4; //5
+  join
+  initial
+  $monitor("At time t=%4t, a=%4d", $time, a);
+  endmodule
+  ```
+* 条件语句
+  * 逻辑表达式必须使用括号括起来
+  * 如果逻辑表达式的值为 0，x，z，则按“假”处理
+  ```verilog
+  if ( 条件1)
+   过程语句 1;
+  if ( 条件1)
+   过程语句 1;
+  else
+   过程语句 2;
+  if ( 条件1)
+   过程语句 1;
+  else if (条件2)
+   过程语句 2;
+  else if (条件3)
+   过程语句 3;
+  ```
+* 多路分支语句,case
+  * 在 case 语句中，x 和 z 作为值 x 和 z 解释
+  * 在 casez 语句中，表达式中的 z 是无关位 —— 忽略，不进行比较
+  * 在 casex 语句中，表达式中的 x 和 z 都是无关位
+  ```verilog
+  reg a;
+  casez (a)
+   1'b0 : statement1;
+   1'b1 : statement2;
+   1'bx : statement3;
+   1'bz : statement4;
+  endcase //输入z，不做比较，直接执行语句1
+
+  reg [4:0] a;
+  case ( 3’b101 << 2)
+   3’b100 : a = 3’d1;
+   4’b1000 : a = 4’d4;
+   5’b1_0100 : a = 5’d16;
+   default: a = 5’dx;
+  endcase
+  //先扩展位宽，再进行计算，然后进行比较
+  ```
+* 禁止语句 disable
+  * disable 任务标识符；
+  * disable 语句块标识符；
+  * 禁止语句是过程性语句，只能出现在 always 和 initial 的语句块中
+* 循环语句:forever repeat while for
+  ```verilog
+  forever
+    procedual_statement
+  
+  repeat (循环计数表达式)
+    过程语句；
+  // 如果计数表达式的值不确定，即为 x 和 z，则循环次数按 0 处理
+
+  while (条件表达式)
+    过程语句；
+  // 如果条件表达式的值为 x 和 z，则按 0（假） 处理
+
+  initial begin
+   for (index=0; index < 10; index = index + 2)
+   mem[index] = index;
+  end
+  ```
+* **if, case, forever, repeat, for, while, 在initial/always语句块中**
+* 生成块
+  * 不允许出现的声明
+    参数、局部参数
+    输入、输出和输入/输出声明
+  * 三种生成语句：循环生成，条件生成，case 生成
+  ```verilog
+  //循环生成
+  module bitwise_xor (out, i0, i1);
+  parameter N = 32; // 32-bit bus by default
+  output [N-1:0] out;
+  input [N-1:0] i0, i1;
+  
+  // 声明用于循环生成块的循环控制变量，只用于生成快 
+  genvar j;
+  // 生成按位异或
+  generate for (j=0; j<N; j=j+1)
+  begin : xor_loop 
+    xor g1 (out[j], i0[j], i1[j]);
+  end 
+  endgenerate // 生成块结束
+  
+  // 另一种设计方式，使用 always 过程语句块
+  // reg [N-1:0] out;
+  // generate for (j=0; j<N; j=j+1) begin: bit
+  // Always @(*) out[j] = i0[j] ^ i1[j];
+  // end
+  // endgenerate
+  
+  endmodule
+  ```
+* **时序逻辑电路，非阻塞赋值；组合逻辑电路，阻塞赋值**
+```verilog
+//二进制编码转换成格雷码
+module bin2gray1 #(parameter N=8)
+( output reg [N-1:0] gray_val, input [N-1:0] bin_val );
+always @(*) gray_val = { bin_val[N-1], bin_val[N-1:1]^bin_val[N-2:0]};
+endmodule
+
+module bin2gray2 #(parameter N=8) ( output [N-1:0] gray_val,
+input [N-1:0] bin_val );
+genvar k;
+generate for (k=0; k<N; k=k+1 ) begin:loop
+assign gray_val[k] = ( k==N-1) ? bin_val[k] : bin_val[k]^bin_val[k+1];
+end
+endgenerate
+endmodule
+
+module bin2gray3 #(parameter N=8) ( output reg [N-1:0] gray_val,
+input [N-1:0] bin_val );
+genvar k;
+generate for (k=0; k<N; k=k+1 ) begin:loop
+always @(*) gray_val[k] = ( k==N-1) ? bin_val[k] : bin_val[k]^bin_val[k+1];
+end
+endgenerate
+endmodule
+```
+```verilog
+//连用
+and #4 a1(e,a,b), u1(out,e,c);//两个门的延迟都是4
+output reg f,g //f,g都是output reg
+```
 ## Chap7 任务和函数
+* 函数，**能调用另外一个函数，但不能调用另外一个任务**；**总是在仿真时刻0就开始执行**；**不能包含任何延时、事件控制或时序控制声明语句**；**至少有一个输入变量**；**不能有输出（output）和双向（inout）变量**；**函数只能返回一个值**
+* 任务和函数必须在模块内进行定义，其作用范围仅局限于定义它们的模块
+* 任务,输出参数的值直到任务退出时，才传给调用参数,**任务调用语句是过程语句，在 always 和 initial 中使用**,**任务调用中的输出/双向(输入输出)参数必须是寄存器类型（任务外）**, 与定义中的输入/输出参数顺序相匹配
+* 如果一个在模块中的两个地方被同时调用，则两次调用任务将对同一块地址空间进行操作;通过使用关键字 automatic 声明自动任务,每次调用都动态分配存储空间，每个任务调用都对各自独立的地址空间进行操作
+  ```verilog
+  task 任务名标识符; // 要有一个任务标识符
+   parameter_declaration;
+   input_declaration;
+   output_declaration;
+   inout_declaration;
+   register_declaration;
+   event_declaration;
+   statement;
+  endtask
+
+  module top;
+  reg [15:0] cd_xor, ef_xor; 
+  reg [15:0] c, d, e, f; 
+  ...
+  task automatic bitwise_xor;
+  output [15:0] ab_xor; 
+  input [15:0] a, b; 
+  begin 
+  #delay ab_and = a & b; 
+  ab_or = a | b; 
+  ab_xor = a ^ b;
+  end
+  endtask
+  ...
+  always @(posedge clk) bitwise_xor(ef_xor, e, f);
+  ...
+  always @(posedge clk2) bitwise_xor(cd_xor, c, d);
+  ...
+  endmodule
+
+  // 使用 ANSI C 风格的变量声明进行任务定义
+  task bitwise_op(output [15:0] ab_and, ab_or, ab_xor, input [15:0] a, b);
+  begin 
+  #delay ab_and = a & b; 
+  ab_or = a | b; 
+  ab_xor = a ^ b;
+  ende
+  ndtask
+  ```
+* 函数：不能包含时序控制语句，将函数作为表达式中的操作数使用，至少要有一个 input 变量，不能有 output 或 inout 变量
+* 函数中局部变量是静态分配的, 每次调用都对对同一块地址空间进行操作
+* 通过使用关键字 automatic 声明自动函数,每次调用都动态分配属于这次调用的存储空间
+```verilog
+function [15:0] negation;
+ input [15:0] a;
+ negation = ~a;
+endfunction
+
+function real multiply;
+ input a, b;
+ real a, b;
+ multiply = ((1.2 * a) * (b * 0.17)) * 5.1;
+endfunction
+
+// 定义计算奇偶校验函数
+function calc_parity;
+input [31:0] address;
+// 使用隐含的内部寄存器 calc_parity.
+calc_parity = ^address; // 返回所有位的异或值（异或规约运算）
+endfunction
+
+// 采用 ANSI C 风格定义计算奇偶校验函数
+function calc_parity (input [31:0] address);
+// 使用隐含的内部寄存器 calc_parity.
+calc_parity = ^address; // 返回所有位的异或值（异或规约运算）
+endfunction
+
+module decoderlogN #(parameter N=8) (
+output reg [N-1:0] y,
+input [clog2(N)-1:0] a ); // 2^n = N --> log2(N)==n
+function integer clog2(input integer n);
+begin
+clog2 = 0;
+n--;
+while ( n>0 ) begin
+clog2 = clog2 + 1;
+n = n>>1;
+end
+end
+endfunction
+always @*
+y = 1'b1 << a;
+endmodule
+```
+* 文件输出任务
+```verilog
+integer 文件指针 = $fopen( file_name );
+$fclose (文件指针);
+$fdisplay(文件指针，... );
+$write(文件指针，... );
+$monitor(文件指针，... );
+```
+* 文件输入任务
+```verilog
+$readmemb(“数据文件名”, memory_name, [起始地址, [结束地址]]
+$readmemh(“数据文件名”, memory_name, [起始地址, [结束地址]]
+```
+* $random [(seed)],返回一个32位有符号随机数
+* `timescale <时间单位> / <时间精度>
+  * 时间单位定义延迟的时间单位
+  * 时间精度定义仿真时间的精确程度
+  * 时间精度不能大于时间单位
+  * 编译指令后面不加分号（；）
+  * $printtimescale [ (层次路径名) ] ;
+* 宏定义, 用一个指定的宏名（标识符）代表一个字符串（宏内容）, 引用宏名时必须在宏名之前加上符号“`”
+  ```verilog
+  module macro_test;
+   reg a, b, c;
+   wire y_out;
+  `define ab a & b
+  `define abc `ab & c
+   assign y_out = `abc;
+  endmodule
+  ```
+  ```verilog
+  `define WORDSIZE 16
+  module m_name;
+   reg [ `WORDSIZE – 1 : 0 ] data;
+   ...
+  endmodule
+  ```
+* 条件编译命令
+  ```verilog
+  `ifdef 宏名
+   程序段 1
+  [`else
+   程序段 2 ]
+  `endif
+  ```
+* `include “文件名”
+
 ## Chap8 用户定义原语UDP
 ## Chap10 组合逻辑设计
 ## Chap11 时序电路设计
 ## Chap12 使用Verilog_HDL进行综合
+
+## TODO
+- [ ] 把课堂ppt过一遍
+- [ ] 课堂笔记
+- [ ] 小测练习
+- [ ] 大作业练习
+- [ ] 翻一遍书
+- [ ] 整理易错的细节
+- [ ] 答疑：quiz2最后一题，
   </font>
