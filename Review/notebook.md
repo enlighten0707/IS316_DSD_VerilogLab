@@ -1,6 +1,7 @@
 <font face="宋体">
 
 # DSD复习笔记
+### by: 吴小茜
 ## Chap2 Verilog 基本概念
 * 模块的结构
 ```verilog
@@ -875,16 +876,410 @@ $readmemh(“数据文件名”, memory_name, [起始地址, [结束地址]]
 * `include “文件名”
 
 ## Chap8 用户定义原语UDP
+* UDP不能综合，只可用于仿真
+* 只有一个1 bit 输出端，端口列表中的第一个,如果定义的是表示时序逻辑的原语，输出端口必须声明为 reg 类型
+* 不支持 inout 端口
+* 状态表中可包含的值为 0、1和 x，不能有 z
+* UDP与模块同级
+* 无关项可用符号“？”表示, ？—— 自动展开为 0、1或 x
+```verilog
+primitive udp_and(out, a, b);
+output out; // 组合逻辑的输出端不能声明成 reg 类型
+input a, b; // 输入端口声明
+// 定义状态表
+table
+// a b : out;
+0 0 : 0;
+0 1 : 0;
+1 0 : 0;
+1 1 : 1;
+endtable
+endprimitive
+
+xor (s1, a, b); // 使用 Verilog 内置原语
+udp_and (c1, a, b); // 使用 UDP
+```
+* 带清零端的电平敏感锁存器,若 clear 为 1，输出 q 恒为 0,若 clear 为 0
+如果 clock 为 1，q = d
+如果 clock 为 0，保持 q
+```verilog
+primitive latch(q, d, clock, clear);
+output q;
+reg q; // 声明 q 为 reg 类型保存内部数据
+
+input d, clock, clear;// 初始化时序 UDP，只允许有一条 initial 语句
+initial q = 0; // 初始化输出为 0
+
+//state table
+table 
+// 当前状态 下一状态 
+// d clock clear : q : q+ 
+? ? 1 : ? : 0 ; // 清零 
+1 1 0 : ? : 1 ; // 将 d 的值锁存在 q = 1 
+0 1 0 : ? : 0 ; // 将 d 的值锁存在 q = 0 
+? 0 0 : ? : - ; // - 表示 q 保持原状态不变
+endtable
+endprimitive
+```
+* 带清零端的下降沿触发的D触发器,若 clear = 1，则 q 的输出恒为 0,若 clear = 0
+当 clock 从 1 跳变到 0 时，则 q = d，否则，q 保持不变
+当 clock 保持稳定时，而 d 改变值，q 不变
+
 ## Chap10 组合逻辑设计
 ## Chap11 时序电路设计
+* 锁存器（latch）,电平敏感存储器
+```verilog
+//一定是非阻塞赋值
+module SRLatch(output reg q, qbar,
+input s, r );
+always @(*) begin
+case ({s,r})
+2'b01: {q, qbar} <= 2'b01;
+2'b10: {q, qbar} <= 2'b10;
+2'b11: {q, qbar} <= 2'bx;
+default ; //有分号，00时候保持不变
+endcase
+end
+endmodule
+
+// D Latch
+module DLatch(output reg Q, output QN, input D, input C );
+always @(*) 
+if (C) Q <= D; //非阻塞赋值
+assign QN = ~Q;
+endmodule
+```
+* 触发器,由时钟跳变沿触发的存储器，在控制时钟上升沿到来的时刻，采样D输入信号，并据此改变Q和QN的输出
+```verilog
+module dff (output reg q, output qn,input d, input clk);
+always @(posedge clk) 
+  q <= d; //非阻塞赋值
+assign qn = ~q;
+endmodule
+
+module dff_ne( output reg q, output qn,
+input d, input clk);
+always @(negedge clk) q <= d;
+assign qn = ~q;
+endmodule
+
+module dff_en(output reg q, output qn, input d, input en, input clk);
+always @(posedge clk) 
+if ( en ) q <= d;
+assign qn = ~q;
+endmodule
+
+module JKFF( output reg q, qn,
+input clk, j, k);
+always @ (posedge clk)
+case ({j,k})
+2'b01: {q, qn} <= 2'b01;
+2'b10: {q, qn} <= 2'b10;
+2'b11: {q, qn} <= {qn, q};
+default: ;
+endcase
+endmodule
+
+module JK_FF ( output reg Q, output Q_b, input Clk, J, K ); 
+assign Q_b = ~ Q ; 
+always @( posedge Clk) 
+case ({J,K}) 
+2'b00: Q <= Q; 
+2'b01: Q <= 1'b0; 
+2'b10: Q <= 1'b1; 
+2'b11: Q <= ~Q; 
+endcase 
+endmodule
+
+module TFF(output reg q, qn, input clk, rst_n, t);
+always @(posedge clk) begin
+if (~rst_n)
+{q, qn} <= 2'b01;
+else
+if (t)
+{q, qn} <= {qn, q};
+end
+endmodule
+```
+* 同步置位和复位，只有在时钟的有效跳变沿的时刻，置位和复位信号脉冲才能使触发器置位和复位
+```verilog
+always @(posedge CLK )
+ if (SET)
+ Q <= 1’b1;
+ else Q <= D;
+
+//复位优先于置位,置位优先于输入
+module DFF_sr( output reg q, qn, input d, clk, reset, set ); 
+always @(posedge clk) 
+if (reset) {q, qn} <= 2'b01; 
+else if (set) {q, qn} <= 2'b10; 
+else begin {q, qn} <= {d, ~d}; end 
+endmodule
+```
+* 异步——操作信号不受时钟脉冲（边沿）控制, 当置位与复位脉冲到来时，立即将触发器的输出端置 1 或 0, 将置位和复位信号列入 always 语句的事件控制列表中
+```verilog
+always @(posedge CLK or posedge SET)
+ if (SET)
+ Q <= 1’b1;
+ else Q <= D;
+
+module DFF_asr( output reg q, qn,input d, clk, reset, set );
+always @(posedge clk, posedge reset, posedge set )
+if (reset) {q, qn} <= 2'b01;
+else if (set) {q, qn} <= 2'b10;
+else {q, qn} <= {d, ~d};
+endmodule
+```
+* 移位寄存器（shift register）
+```verilog
+//串行输入/串行输出
+module shiftreg4b( output reg dout, input clk, reset, din);
+reg [3:0] r;
+always @( posedge clk or posedge reset ) 
+if (reset) r <= 4'b0000; 
+else 
+begin r <= {r[2:0], din}; 
+dout <= r[3]; 
+end
+endmodule
+
+//串行输入/并行输出
+module shiftreg4b( output reg [3:0] dout, input clk, reset, din);
+always @(posedge clk or posedge reset) 
+if (reset) dout <= 4'h0; 
+else dout <= {dout[2:0], din};
+endmodule
+
+//左移、右移、加载
+module UShiftReg #(parameter N=8) ( output reg [N-1:0] q,input [N-1:0] d, input [1:0] s,input Lin, Rin,input clk, rst_n );always @ (posedge clk)
+if (~rst_n) q <= 0;
+else
+case (s)
+2'b11:q <= d;
+2'b10:q <= {q[N-2:0], Lin};
+2'b01:q <= {Rin, q[N-1:1]};
+default: ;
+endcase
+endmodule
+
+module filter(output reg y, input clk, rst_n, din); 
+reg [3:0] q; 
+always @(posedge clk) 
+begin 
+if (!rst_n) 
+  begin q <= 4'b0; y <= 1'b0; end 
+else 
+begin 
+if ( &q[3:1]) y <= 1'b1;
+else if (~|q[3:1]) y <= 1'b0; 
+
+q <= {q[2:0], din}; 
+end 
+end 
+endmodule
+```
+* 线性反馈移位寄存器（LFSR）,**电路图**
+```verilog
+module LFSR( output reg [0:7] q, // 8 bit data output.
+input clk, // Clock input.
+input rst_n, // Synchronous reset input.
+input load, // Synchronous load input.
+input [0:7] din // 8 bit parallel data input.
+);
+always @( posedge clk ) begin
+if ( ~rst_n )
+q <= 8'b0;
+else begin
+if (load)
+q <= (|din) ? din : 8'b0000_0001;
+else begin
+if ( q == 8'b0 )
+q <= 8'b0000_0001;
+else begin
+q[7] <= q[6];
+q[6] <= q[5] ^ q[7];
+q[5] <= q[4] ^ q[7];
+{q[4], q[3], q[2]} <= {q[3], q[2], q[1]};
+q[1] <= q[0] ^ q[7];
+q[0] <= q[7];
+end
+end
+end
+end
+endmodule
+```
+* 具有异步复位的 4 位计数器
+```verilog
+module counter #(parameter N=4) ( output reg [N-1:0] count, input clk, rst_n);
+always @(posedge clk or posedge rst_n) //negedge rst_n?
+if ( ~rst_n )count <= 0;
+else count <= count + 1;
+endmodule
+
+//可逆
+module decimal_counter #(parameter N = 4)  //parameter，格式
+( output reg [N-1:0] count, output reg sup, inf, input clk, rst_n, load, dir, input [N-1 : 0] data );
+always @ (posedge clk) 
+begin 
+if (!rst_n) 
+begin 
+count <= 4'd0; {inf, sup} <= 2'b0; 
+end 
+else if (load) count <= data; 
+else 
+if (!dir) 
+if ( count < 4'd9) 
+begin count <= count + 4'd1; {inf, sup} <= 2'b0; end //{inf, sup} <= 2'b0; 两个都赋值
+else begin count <= 4'd0; {inf, sup} <= 2'b01; end 
+else if ( count > 4'd0) begin count <= count - 4'd1; {inf, sup} <= 2'b0; end 
+else begin count <= 4'd9; {inf, sup} <= 2'b10; 
+end 
+end 
+endmodule
+
+//对应的仿真
+initial begin 
+p_clk = 0; 
+forever #5 p_clk = ~p_clk; 
+end 
+
+initial begin 
+p_rst = 0; 
+#20 p_rst = 1'b1; 
+end 
+
+initial begin 
+p_load = 0; 
+p_dir = 0; 
+p_data = 4'bx; 
+#120 p_data = 4'd9; 
+#18 p_load = 1'b1; 
+#18 p_load = 1'b0; 
+#5 p_data = 4'dz; 
+#12 p_dir = 1'b1; 
+end
+```
+* 存储器：跳过了一些内容
+```verilog
+module ROM(output [7:0] data, input [3:0] address, input en);
+assign data = (en) ? ROM_LOC(address) : 8'bz;
+function [7:0] ROM_LOC( input [3:0] a );
+case (a)
+4'h0: ROM_LOC = 8'b1010_1001;
+4'h1: ROM_LOC = 8'b1111_1101;
+4'h2: ROM_LOC = 8'b1110_1001;
+4'h3: ROM_LOC = 8'b1101_1100;
+4'h4: ROM_LOC = 8'b1011_1001;
+4'h5: ROM_LOC = 8'b1100_0010;
+4'h6: ROM_LOC = 8'b1100_0101;
+4'h7: ROM_LOC = 8'b0000_0100;
+4'h8: ROM_LOC = 8'b1110_1100;
+4'h9: ROM_LOC = 8'b1000_1010;
+4'hA: ROM_LOC = 8'b1100_1111;
+4'hB: ROM_LOC = 8'b0011_0100;
+4'hC: ROM_LOC = 8'b1100_0001;
+4'hD: ROM_LOC = 8'b1001_1111;
+4'hE: ROM_LOC = 8'b1010_0101;
+4'hF: ROM_LOC = 8'b0101_1100;
+default:ROM_LOC = 8'bx;
+endcase
+endfunction
+endmodule
+
+module ROM ( output reg [7:0] data, // Address input
+            input [3:0] address, // Data output
+            input en, // Read Enable
+            input ce // Chip Enable
+            );
+always @(*) begin
+if ( en && ce )
+  case (address)
+    0 : data = 8'ha;
+    1 : data = 8'h37;
+    2 : data = 8'hf4;
+    3 : data = 8'h0;
+    4 : data = 8'h9;
+    5 : data = 8'hff;
+    6 : data = 8'h11;
+    7 : data = 8'h1;
+    8 : data = 8'h10;
+    9 : data = 8'h15;
+    10 : data = 8'h1d;
+    11 : data = 8'h25;
+    12 : data = 8'h60;
+    13 : data = 8'h90;
+    14 : data = 8'h70;
+    15 : data = 8'h90;
+    default: data = 8'hz;
+  endcase
+else data = 8'hz;
+end
+endmodule
+```
+* 堆栈（LIFO）
+* 有限状态机（FSM，finite state machine）,设计时采用同步复位
+  * Mealy 机:输出同时取决于状态和输入
+  * Moore机:输出只由状态决定
+  ```verilog
+  module mealy( output reg yout, input clk, rst, xin );
+    parameter A=2'b01, B=2'b10;
+    reg [1:0] state;
+    always @(posedge clk) begin
+    if (!rst) begin state <= A; yout <= 1'b0; end
+    else
+    case(state)
+      A: if (xin) begin yout <= 1'b1; state <= B; end
+      else begin yout <= 1'b0; state <= A; end
+      B: if (xin) begin yout <= 1'b0; state <= A; end
+      else begin yout <= 1'b1; state <= B; end
+      default:begin yout <= 1'b0; state <= A; end
+    endcase
+    end
+  endmodule
+  ```
+  ```verilog
+  //JK触发器的Moore 电路表示
+  module Moore_JK( output reg q, qn, input clk, rst, j, k );
+  parameter A=2'b01, B=2'b10;
+  reg [1:0] state;
+  always @(posedge clk) begin
+  if (!rst) begin {q,qn} <= 2'b01; state <= A; end
+  else begin
+  case(state)
+  A: begin
+  {q,qn} <= 2'b01;
+  state <= (j==1'b1) ? B : A;
+  end
+  B: begin
+  {q,qn} <= 2'b10;
+  state <= (k==1'b1) ? A : B;
+  end
+  default: ;
+  endcase
+  end
+  end
+  endmodule
+  ```
 ## Chap12 使用Verilog_HDL进行综合
 
+```verilog
+//仿真模块
+
+initial begin
+p_s = 0;
+forever begin
+#8 p_s = 1'b1; #2 p_s = 1'b0;
+end
+end
+
+```
 ## TODO
-- [ ] 把课堂ppt过一遍
-- [ ] 课堂笔记
-- [ ] 小测练习
-- [ ] 大作业练习
-- [ ] 翻一遍书
-- [ ] 整理易错的细节
-- [ ] 答疑：quiz2最后一题，
+- [x] Chap12
+- [ ] pad上的课堂笔记
+- [x] 整理易错的细节
+- [ ] 最后一堂课的笔记,听一遍
+- [x] 时序逻辑电路整理
+- [x] 大作业一些题目过一遍
+- [x] 答疑：quiz2最后一题，
+- [x] 翻一遍书
   </font>
